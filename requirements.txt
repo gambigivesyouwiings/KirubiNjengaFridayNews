@@ -1,0 +1,108 @@
+Flask==	2.2.5
+Jinja2==	3.1.2
+Markdown==	3.3.7
+MarkupSafe==	2.1.3
+PyYAML==	6.0
+Pygments==	2.15.1
+Werkzeug==	2.2.3
+blinker==	1.6.2
+certifi==	2023.5.7
+charset-normalizer==	3.1.0
+click==	8.1.3
+colorama==	0.4.6
+flask-googlemaps==	0.4.1
+ghp-import==	2.1.0
+gunicorn==	20.1.0
+htmlmin==	0.1.12
+idna==	3.4
+itsdangerous==	2.1.2
+jsmin==	3.0.1
+mergedeep==	1.3.4
+mkdocs==	1.4.3
+mkdocs-material==	5.5.14
+mkdocs-material-extensions==	1.1.1
+mkdocs-minify-plugin==	0.3.0
+packaging==	23.1
+pip==	23.2
+pymdown-extensions==	10.0.1
+python-dateutil==	2.8.2
+python-dotenv==	0.21.0
+pyyaml-env-tag==0.1
+requests==	2.31.0
+setuptools==	60.2.0
+six==	1.16.0
+urllib3==	2.0.3
+watchdog==	3.0.0
+wheel==	0.37.1
+Flask-CKEditor==0.4.4.1
+Flask-Gravatar==0.5.0
+Flask-Login==0.6.2
+Flask-SQLAlchemy==3.0.3
+Flask-WTF==1.1.1
+WTForms==3.0.1
+Flask-Bootstrap==3.3.7.1
+bleach==6.0.0
+SQLAlchemy==2.0.19
+Pillow=fl=10.0.0
+
+Flask	2.2.5	2.3.2
+Flask-Bootstrap	3.3.7.1	3.3.7.1
+Flask-CKEditor	0.4.4.1	0.4.6
+Flask-Gravatar	0.5.0	0.5.0
+Flask-Login	0.6.2	0.6.2
+Flask-Mail	0.9.1	0.9.1
+Flask-Migrate	4.0.4	4.0.4
+Flask-SQLAlchemy	3.0.3	3.0.5
+Flask-WTF	1.1.1	1.1.1
+Jinja2	3.1.2	3.1.2
+Mako	1.2.4	1.2.4
+Markdown	3.3.7	3.4.4
+MarkupSafe	2.1.3	2.1.3
+Pillow	10.0.0	10.0.0
+PyYAML	6.0	6.0.1
+Pygments	2.15.1	2.16.1
+SQLAlchemy	2.0.19	2.0.19
+WTForms	3.0.1	3.0.1
+Werkzeug	2.2.3	2.3.6
+alembic	1.11.2	1.11.2
+av	10.0.0	10.0.0
+bleach	6.0.0	6.0.0
+blinker	1.6.2	1.6.2
+certifi	2023.5.7	2023.7.22
+charset-normalizer	3.1.0	3.2.0
+click	8.1.3	8.1.6
+colorama	0.4.6	0.4.6
+dominate	2.8.0	2.8.0
+ffmpeg	1.4	1.4
+flask-googlemaps	0.4.1	0.4.1
+ghp-import	2.1.0	2.1.0
+greenlet	2.0.2	2.0.2
+gst	0.1.0	0.1.0
+gunicorn	20.1.0	21.2.0
+htmlmin	0.1.12	0.1.12
+idna	3.4	3.4
+itsdangerous	2.1.2	2.1.2
+jsmin	3.0.1	3.0.1
+mergedeep	1.3.4	1.3.4
+mkdocs	1.4.3	1.5.2
+mkdocs-material	5.5.14	9.1.21
+mkdocs-material-extensions	1.1.1	1.1.1
+mkdocs-minify-plugin	0.3.0	0.7.1
+packaging	23.1	23.1
+pip	23.2	23.2.1
+pyffmpeg	2.4.2.18	2.4.2.18
+pymdown-extensions	10.0.1	10.1
+pymediainfo	6.0.1	6.0.1
+python-dateutil	2.8.2	2.8.2
+python-dotenv	0.21.0	1.0.0
+pyvideothumbnailer	2.0.3	2.0.3
+pyyaml-env-tag	0.1
+requests	2.31.0	2.31.0
+setuptools	60.2.0	68.0.0
+six	1.16.0	1.16.0
+typing-extensions	4.7.1	4.7.1
+urllib3	2.0.3	2.0.4
+visitor	0.1.3	0.1.3
+watchdog	3.0.0	3.0.0
+webencodings	0.5.1	0.5.1
+wheel	0.37.1	0.41.1
