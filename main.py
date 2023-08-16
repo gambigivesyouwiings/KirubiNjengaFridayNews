@@ -8,7 +8,7 @@ from datetime import datetime
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail, Message
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 from functools import wraps
 from flask import abort
 import bleach
@@ -28,6 +28,10 @@ load_dotenv("C:/Users/User/OneDrive/Documents/environment variables/gh.txt")
 map_api = os.getenv("map_api")
 app = Flask(__name__)
 
+user, password = 'fridaynews', 'vmgambii'
+host = 'fridaynews.mysql.pythonanywhere-services.com'
+db_name = 'fridaynews$default' # dbFlask was created as a PythonAnywhere MySQL database
+
 app.config['SECRET_KEY'] = "secret_key"
 app.config['GOOGLEMAPS_KEY'] = os.getenv("google_key")
 Bootstrap(app)
@@ -44,7 +48,7 @@ gravatar = Gravatar(app,
                     base_url=None)
 
 # CONNECT TO DB
-app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///content.db"
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql://{user}:{password}@{host}/{db_name}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["SECURITY_PASSWORD_SALT"] = "dfdsdsdsdssdwerty"
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -184,7 +188,13 @@ def create_admin():
 
 @app.route("/")
 def home():
-    posts = db.session.query(MediaFiles).all()
+    try:
+        posts = db.session.query(MediaFiles).all()
+    except ProgrammingError:
+        posts = []
+        with app.app_context():
+            db.create_all()
+
     return render_template("index.html", admin_list=admin_list, all_posts=posts)
 
 
