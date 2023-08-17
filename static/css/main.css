@@ -345,6 +345,12 @@ margin-top: 3%;
   color: #fff;
 }
 
+.alien {
+background-color: #FFB6C1;
+justify-content: center;
+text-align: center;
+}
+
 @media (max-width: 575px) {
   .header .header-social-links a {
     padding-left: 5px;

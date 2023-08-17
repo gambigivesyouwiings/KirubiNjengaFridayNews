@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 import shutil
 from itsdangerous import URLSafeTimedSerializer
 
-load_dotenv("C:/Users/User/OneDrive/Documents/environment variables/gh.txt")
+load_dotenv("C:/Users/User/PycharmProjects/environment variables/.env")
 map_api = os.getenv("map_api")
 app = Flask(__name__)
 
@@ -46,8 +46,12 @@ gravatar = Gravatar(app,
 # CONNECT TO DB
 app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///content.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config["SECURITY_PASSWORD_SALT"] = "dfdsdsdsdssdwerty"
+app.config["SECURITY_PASSWORD_SALT"] = os.getenv("SALT")
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_USERNAME'] = os.getenv("USERN")
+app.config['MAIL_PASSWORD'] = os.getenv("GMAIL")
+print(os.getenv("GMAIL_PASS"))
+
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
@@ -74,6 +78,7 @@ def send_email(to, subject, template):
         html=template,
         sender=app.config['MAIL_USERNAME']
     )
+    mail.send(msg)
 
 
 def generate_token(email):
@@ -191,7 +196,7 @@ def home():
 @app.route('/register', methods=["GET", "POST"])
 def register():
     form = RegisterForm()
-    if form.validate_on_submit():
+    if request.method == "POST":
         user = Users()
         user.name = request.form.get("name")
         user.email = request.form.get("email")
@@ -207,7 +212,7 @@ def register():
             db.session.add(user)
             db.session.commit()
         except IntegrityError:
-            flash('User already exists! Try logging instead')
+            flash('User already exists! Try logging in instead')
             return redirect(url_for('login'))
         token = generate_token(user.email)
         confirm_url = url_for("confirm_email", token=token, _external=True)
@@ -215,8 +220,14 @@ def register():
         subject = "Please confirm your email"
         send_email(user.email, subject, html)
         flash("successfully registered")
-        return redirect(url_for("home"))
+        login_user(user)
+        return redirect(url_for("auth"))
     return render_template("register.html", form=form)
+
+
+@app.route('/auth2')
+def auth():
+    return render_template("email-auth.html")
 
 
 @app.route('/login', methods=["GET", "POST"])

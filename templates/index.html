@@ -4,10 +4,23 @@
   <section id="hero" class="hero d-flex flex-column justify-content-center align-items-center" data-aos="fade" data-aos-delay="1500">
     <div class="container">
       <div class="row justify-content-center">
+        {% if current_user.is_confirmed == False %}
+        <div class="alien">
+          <h6>Verify your account to get full access and enable recovery</h6>
+          <a href="{{url_for('auth')}}">Click here</a>
+        </div>
+        {% endif %}
         <div class="col-lg-6 text-center">
           <h2> Welcome to <span>Friday News</span></h2>
           <p>Where the hottest content is at!</p>
           <a href="{{url_for('contact')}}" class="btn-get-started">RSVP</a>
+          {% with messages = get_flashed_messages() %}
+          {% if messages %}
+          <p class="notification is-danger" style="color:red;padding:3%">
+            {{ messages[0] }}.
+          </p>
+          {% endif %}
+          {% endwith %}
         </div>
       </div>
     </div>

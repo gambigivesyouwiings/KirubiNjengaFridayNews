@@ -15,7 +15,7 @@ class RegisterForm(FlaskForm):
     name = StringField("Enter your name", validators=[DataRequired()])
     email = EmailField("Enter your email address", validators=[DataRequired()])
     password = PasswordField("Enter your password", validators=[DataRequired(), Length(min=6, max=25)])
-    confirm = PasswordField("Repeat password", validators=[InputRequired(), DataRequired(), EqualTo("password", message="Passwords must match.")],)
+    confirm = PasswordField("Repeat password", validators=[InputRequired(), DataRequired(), EqualTo("password", message="Passwords must match.")])
     submit = SubmitField("Sign me Up")
 
 

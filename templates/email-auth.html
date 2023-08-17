@@ -8,13 +8,10 @@
       <div class="container position-relative">
         <div class="row d-flex justify-content-center">
           <div class="col-lg-6 text-center">
-            <h2>Register for an account</h2>
-              <p>We can't wait to hear your comments!</p>
-
-
-            {{ wtf.quick_form(form, form_type="inline", button_map={"submit": "primary"}) }}
-
-
+            <h2>Thank you for registering!</h2>
+              <p>Please check your email to verify your account.</p>
+              <p>If you don't see it check your spam folder as well</p>
+              <p>Didn't see it? Click here to <a href="{{url_for('resend_confirmation')}}">resend it</a></p>
 <!--            <a class="cta-btn" href="contact.html">Available for hire</a>-->
 
           </div>
