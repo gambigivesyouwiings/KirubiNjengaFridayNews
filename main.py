@@ -54,8 +54,7 @@ app.config["SECURITY_PASSWORD_SALT"] = os.getenv("SALT")
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_USERNAME'] = os.getenv("USERN")
 app.config['MAIL_PASSWORD'] = os.getenv("GMAIL")
-print(os.getenv("GMAIL_PASS"))
-
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle' : 280}
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
@@ -70,7 +69,7 @@ video_file_types = ['.WEBM' '.MPG', '.MP2', '.MPEG', '.OGG',
                     '.M4V', '.AVI', '.WMV', '.MOV',
                     '.QT', '.FLV', '.SWF', '.AVCHD']
 
-image_file_types = ['webp', 'svg', 'png', 'avif', 'jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'gif', 'apng']
+image_file_types = ['.webp', '.svg', '.png', '.avif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.gif', '.apng']
 
 admin_list = ["gambikimathi@students.uonbi.ac.ke"]
 
@@ -287,13 +286,13 @@ def logout():
 
 
 @app.route("/confirm/<token>")
-@login_required
 def confirm_email(token):
-    if current_user.is_confirmed:
-        flash("Account already confirmed.", "success")
-        return redirect(url_for("home"))
     email = confirm_token(token)
-    user = Users.query.filter_by(email=current_user.email).first_or_404()
+    user = Users.query.filter_by(email=email).first_or_404()
+    if user.is_confirmed:
+       flash("Account already confirmed.", "success")
+       return redirect(url_for("home"))
+
     if user.email == email:
         user.is_confirmed = True
         user.confirmed_on = datetime.now()
@@ -400,6 +399,8 @@ def upload():
                         os.remove(video_file)
                     except FileNotFoundError:
                         pass
+                    except TypeError:
+                        pass
                     return redirect(url_for('upload'))
 
             for file in files:
@@ -409,14 +410,6 @@ def upload():
                     flash("That filename is already in the database. Try renaming and try again")
                     os.remove(video_file)
                     os.remove(image_file)
-                    try:
-                        os.remove(newpath+image_file)
-                    except FileNotFoundError:
-                        pass
-                    try:
-                        os.remove(newpath + video_file)
-                    except FileNotFoundError:
-                        pass
                     return redirect(url_for('upload'))
 
             video_file = newpath + video_file
