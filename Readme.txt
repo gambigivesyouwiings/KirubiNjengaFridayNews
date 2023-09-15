@@ -1,6 +1,9 @@
-Thanks for downloading this template!
+## EXCLUSIVE CONTENT WEBSITE
+----------------------------
 
-Template Name: PhotoFolio
-Template URL: https://bootstrapmade.com/photofolio-bootstrap-photography-website-template/
-Author: BootstrapMade.com
-License: https://bootstrapmade.com/license/
+# Introduction
+This is the codebase for the web-app: http://fridaynews.pythonanywhere.com/
+Designed by: Victor Mugambi Kimathi
+
+## Related projects:
+I also design web-apps as a gig on Fiver. You can check that out here: https://www.fiverr.com/s/1ozAdp
