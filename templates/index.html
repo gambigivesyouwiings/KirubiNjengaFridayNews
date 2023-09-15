@@ -41,6 +41,10 @@
                   <img src="{{ post.img_url }}" class="img-fluid" alt="">
                   <div class="gallery-links d-flex align-items-center justify-content-center">
                     <a href="{{ post.img_url }}" title="{{post.title}}" class="glightbox preview-link"><i class="bi bi-arrows-angle-expand"></i></a>
+
+                    {% if current_user.email in admin_list %}
+                    <a href="{{ url_for('pre_delete', index=post.id)}}" class="details-link"><i class="bi bi-x-circle-fill"></i></a>
+                    {%endif%}
                   </div>
                 {% else %}
 <!--              <video class="img-fluid" controls="controls" poster="{{ post.img_url }}" muted preload="auto">-->
@@ -51,6 +55,8 @@
                 <a href="{{ post.video_url }}" title="{{post.title}} - {{ post.date }}" class="glightbox preview-link"><i class="bi bi-arrows-angle-expand"></i></a>
                 {% if current_user.email in admin_list %}
                 <a href="{{ url_for('edit', index=post.id, img_to_remove=post.img_url) }}" class="details-link"><i class="bi bi-link-45deg"></i></a>
+                <a href="{{ url_for('pre_delete', index=post.id)}}" class="details-link"><i class="bi bi-x-circle-fill"></i></a>
+
                 {%endif%}
               </div>
                 {% endif %}

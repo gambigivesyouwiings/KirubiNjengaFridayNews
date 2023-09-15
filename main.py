@@ -71,7 +71,7 @@ video_file_types = ['.WEBM' '.MPG', '.MP2', '.MPEG', '.OGG',
 
 image_file_types = ['.webp', '.svg', '.png', '.avif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.gif', '.apng']
 
-admin_list = ["gambikimathi@students.uonbi.ac.ke"]
+admin_list = ["gambikimathi@students.uonbi.ac.ke","chadkirubi@gmail.com","njengashwn@gmail.com"]
 
 
 def send_email(to, subject, template):
@@ -208,7 +208,7 @@ def register():
     if request.method == "POST":
         user = Users()
         user.name = request.form.get("name")
-        user.email = request.form.get("email")
+        user.email = request.form.get("email").lower()
         user.created_on = datetime.now()
         password = request.form.get("password")
         confirmed_pass = request.form.get("confirm")
@@ -315,6 +315,32 @@ def contact():
         #     flash("Your message has been sent. Thank you!")
         print(email)
     return render_template("contact.html")
+
+
+@app.route("/pre_delete/<int:index>", methods=["GET", "POST"])
+@admin_only
+def pre_delete(index):
+    return render_template("delete.html", id=index)
+
+
+@app.route("/delete/<int:post_id>", methods=["GET", "POST"])
+@admin_only
+def delete(post_id):
+    blog_to_delete = db.session.query(MediaFiles).filter_by(id=post_id).first()
+    if blog_to_delete.img_url is not None:
+        try:
+            os.remove(blog_to_delete.img_url)
+        except FileNotFoundError:
+            pass
+    if blog_to_delete.video_url is not None:
+        try:
+            os.remove(blog_to_delete.video_url)
+        except FileNotFoundError:
+            pass
+
+    db.session.delete(blog_to_delete)
+    db.session.commit()
+    return redirect(url_for('home'))
 
 
 @app.route("/mservices")
