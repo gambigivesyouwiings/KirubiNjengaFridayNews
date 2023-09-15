@@ -24,14 +24,18 @@ from dotenv import load_dotenv
 import shutil
 from itsdangerous import URLSafeTimedSerializer
 
+# Loading environment variables from a secure .env file
 load_dotenv("C:/Users/User/PycharmProjects/environment variables/.env")
 map_api = os.getenv("map_api")
-app = Flask(__name__)
 
+
+# dbFlask was created as a PythonAnywhere MySQL database
 user, password = 'fridaynews', 'vmgambii'
 host = 'fridaynews.mysql.pythonanywhere-services.com'
-db_name = 'fridaynews$default' # dbFlask was created as a PythonAnywhere MySQL database
+db_name = 'fridaynews$default' 
 
+# Initializing the app variables and import classes
+app = Flask(__name__)
 app.config['SECRET_KEY'] = "secret_key"
 app.config['GOOGLEMAPS_KEY'] = os.getenv("google_key")
 Bootstrap(app)
@@ -73,7 +77,7 @@ image_file_types = ['.webp', '.svg', '.png', '.avif', '.jpg', '.jpeg', '.jfif', 
 
 admin_list = ["gambikimathi@students.uonbi.ac.ke","chadkirubi@gmail.com","njengashwn@gmail.com"]
 
-
+# This function sends mail to end-users with the Flask-Mail module
 def send_email(to, subject, template):
     msg = Message(
         subject,
@@ -83,12 +87,12 @@ def send_email(to, subject, template):
     )
     mail.send(msg)
 
-
+# This function generates a unique token that is used for user account authentication
 def generate_token(email):
     serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
     return serializer.dumps(email, salt=app.config["SECURITY_PASSWORD_SALT"])
 
-
+# This function checks the token and returns the associated email address.
 def confirm_token(token, expiration=3600):
     serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
     try:
@@ -99,7 +103,7 @@ def confirm_token(token, expiration=3600):
     except Exception:
         return False
 
-
+# This saves a post metadata to the database 
 def save_post(img_url, video_url=None, title='untitled', author=current_user):
     x = datetime.now()
     full_date = x.strftime("%d %B %Y")
@@ -119,7 +123,7 @@ def save_post(img_url, video_url=None, title='untitled', author=current_user):
 def load_user(user_id):
     return Users.query.get(int(user_id))
 
-
+# Function wrapper to protect some routes from non-admin access
 def admin_only(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -189,7 +193,7 @@ def create_admin():
         except Exception:
             print("Couldn't create admin user.")
 
-
+# Home route for landing page
 @app.route("/")
 def home():
     try:
@@ -202,6 +206,7 @@ def home():
     return render_template("index.html", admin_list=admin_list, all_posts=posts)
 
 
+# Register route gets user data from form and saves to database
 @app.route('/register', methods=["GET", "POST"])
 def register():
     form = RegisterForm()
@@ -234,11 +239,13 @@ def register():
     return render_template("register.html", form=form)
 
 
+# Route to give email auth page
 @app.route('/auth2')
 def auth():
     return render_template("email-auth.html")
 
 
+# Login to the website account for user
 @app.route('/login', methods=["GET", "POST"])
 def login():
     form = LoginForm()
@@ -279,12 +286,14 @@ def resend_confirmation():
     return redirect(url_for("home"))
 
 
+# Log out user from their session
 @app.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('home'))
 
 
+# Confirm the user's email
 @app.route("/confirm/<token>")
 def confirm_email(token):
     email = confirm_token(token)
@@ -304,6 +313,7 @@ def confirm_email(token):
     return redirect(url_for("home"))
 
 
+# Contact page route
 @app.route("/contact_us", methods=["GET", "POST"])
 def contact():
     if request.method == "POST":
@@ -317,6 +327,7 @@ def contact():
     return render_template("contact.html")
 
 
+# Gives admin a chance to verify that indeed they want to delete a post
 @app.route("/pre_delete/<int:index>", methods=["GET", "POST"])
 @admin_only
 def pre_delete(index):
@@ -342,7 +353,7 @@ def delete(post_id):
     db.session.commit()
     return redirect(url_for('home'))
 
-
+# Route for services page
 @app.route("/mservices")
 def service():
     return render_template("services.html")
@@ -353,6 +364,7 @@ def gallery():
     return render_template("gallery2.html")
 
 
+# Route for about page section
 @app.route("/about_us")
 def about():
     return render_template("about2.html")
@@ -363,16 +375,7 @@ def sample():
     return render_template("sample-inner-page.html")
 
 
-@app.route("/tribe")
-def single():
-    return render_template("gallery-single1.html")
-
-
-@app.route("/sheraton")
-def single2():
-    return render_template("gallery-single2.html")
-
-
+# Route for uploading posts
 @app.route("/upload", methods=["GET", "POST"])
 @login_required
 @admin_only
@@ -471,6 +474,7 @@ def upload():
     return render_template("upload.html")
 
 
+# This route is for editing a blog post thumbnail, title etc.
 @app.route("/edit-post/<index>", methods=["GET", "POST"])
 @login_required
 @admin_only
