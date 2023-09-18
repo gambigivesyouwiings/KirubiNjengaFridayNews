@@ -5,6 +5,7 @@
 This is the codebase for the web-app: [fridaynews](http://fridaynews.pythonanywhere.com/)
 
 Designed by: Victor Mugambi Kimathi
+
 The go-to site for exclusive content for loyal fans.
 
 
