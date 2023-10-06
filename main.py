@@ -66,7 +66,7 @@ video_file_types = ['.WEBM' '.MPG', '.MP2', '.MPEG', '.OGG',
                     '.M4V', '.AVI', '.WMV', '.MOV',
                     '.QT', '.FLV', '.SWF', '.AVCHD']
 
-image_file_types = ['webp', 'svg', 'png', 'avif', 'jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'gif', 'apng']
+image_file_types = ['.webp', '.svg', '.png', '.avif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.gif', '.apng']
 
 admin_list = ["gambikimathi@students.uonbi.ac.ke"]
 
@@ -302,10 +302,40 @@ def contact():
         email = request.form["email"]
         subject = request.form["subject"]
         message = request.form["message"]
-        # if email != "":
-        #     flash("Your message has been sent. Thank you!")
-        print(email)
+        msg = Message(
+            subject,
+            recipients=app.config['MAIL_USERNAME'],
+            body=email+"\n"+message,
+            sender=app.config['MAIL_USERNAME']
+        )
+        mail.send(msg)
     return render_template("contact.html")
+
+
+@app.route("/pre_delete/<int:index>", methods=["GET", "POST"])
+@admin_only
+def pre_delete(index):
+    return render_template("delete.html", id=index)
+
+
+@app.route("/delete/<int:post_id>", methods=["GET", "POST"])
+@admin_only
+def delete(post_id):
+    blog_to_delete = db.session.query(MediaFiles).filter_by(id=post_id).first()
+    if blog_to_delete.img_url is not None:
+        try:
+            os.remove(blog_to_delete.img_url)
+        except FileNotFoundError:
+            pass
+    if blog_to_delete.video_url is not None:
+        try:
+            os.remove(blog_to_delete.video_url)
+        except FileNotFoundError:
+            pass
+
+    db.session.delete(blog_to_delete)
+    db.session.commit()
+    return redirect(url_for('home'))
 
 
 @app.route("/mservices")
@@ -389,6 +419,8 @@ def upload():
                     try:
                         os.remove(video_file)
                     except FileNotFoundError:
+                        pass
+                    except TypeError:
                         pass
                     return redirect(url_for('upload'))
 
@@ -493,7 +525,7 @@ def edit(index):
                 blog_to_edit.title = edit_form.title.data
         except IntegrityError:
             flash("Two blog posts can't have the same title")
-            return redirect(url_for('edit', index=index))
+            return url_for('edit', index=index)
         finally:
             blog_to_edit.img_url = image_file
             db.session.commit()
