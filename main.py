@@ -8,7 +8,7 @@ from datetime import datetime
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail, Message
 from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 from functools import wraps
 from flask import abort
 import bleach
@@ -24,10 +24,18 @@ from dotenv import load_dotenv
 import shutil
 from itsdangerous import URLSafeTimedSerializer
 
+# Loading environment variables from a secure .env file
 load_dotenv("C:/Users/User/PycharmProjects/environment variables/.env")
 map_api = os.getenv("map_api")
-app = Flask(__name__)
 
+
+# dbFlask was created as a PythonAnywhere MySQL database
+user, password = 'fridaynews', 'vmgambii'
+host = 'fridaynews.mysql.pythonanywhere-services.com'
+db_name = 'fridaynews$default' 
+
+# Initializing the app variables and import classes
+app = Flask(__name__)
 app.config['SECRET_KEY'] = "secret_key"
 app.config['GOOGLEMAPS_KEY'] = os.getenv("google_key")
 Bootstrap(app)
@@ -44,14 +52,13 @@ gravatar = Gravatar(app,
                     base_url=None)
 
 # CONNECT TO DB
-app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///content.db"
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql://{user}:{password}@{host}/{db_name}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["SECURITY_PASSWORD_SALT"] = os.getenv("SALT")
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_USERNAME'] = os.getenv("USERN")
 app.config['MAIL_PASSWORD'] = os.getenv("GMAIL")
-print(os.getenv("GMAIL_PASS"))
-
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle' : 280}
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
@@ -66,11 +73,11 @@ video_file_types = ['.WEBM' '.MPG', '.MP2', '.MPEG', '.OGG',
                     '.M4V', '.AVI', '.WMV', '.MOV',
                     '.QT', '.FLV', '.SWF', '.AVCHD']
 
-image_file_types = ['webp', 'svg', 'png', 'avif', 'jpg', 'jpeg', 'jfif', 'pjpeg', 'pjp', 'gif', 'apng']
+image_file_types = ['.webp', '.svg', '.png', '.avif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.gif', '.apng']
 
-admin_list = ["gambikimathi@students.uonbi.ac.ke"]
+admin_list = ["gambikimathi@students.uonbi.ac.ke","chadkirubi@gmail.com","njengashwn@gmail.com"]
 
-
+# This function sends mail to end-users with the Flask-Mail module
 def send_email(to, subject, template):
     msg = Message(
         subject,
@@ -80,12 +87,12 @@ def send_email(to, subject, template):
     )
     mail.send(msg)
 
-
+# This function generates a unique token that is used for user account authentication
 def generate_token(email):
     serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
     return serializer.dumps(email, salt=app.config["SECURITY_PASSWORD_SALT"])
 
-
+# This function checks the token and returns the associated email address.
 def confirm_token(token, expiration=3600):
     serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
     try:
@@ -96,7 +103,7 @@ def confirm_token(token, expiration=3600):
     except Exception:
         return False
 
-
+# This saves a post metadata to the database 
 def save_post(img_url, video_url=None, title='untitled', author=current_user):
     x = datetime.now()
     full_date = x.strftime("%d %B %Y")
@@ -116,7 +123,7 @@ def save_post(img_url, video_url=None, title='untitled', author=current_user):
 def load_user(user_id):
     return Users.query.get(int(user_id))
 
-
+# Function wrapper to protect some routes from non-admin access
 def admin_only(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -186,20 +193,27 @@ def create_admin():
         except Exception:
             print("Couldn't create admin user.")
 
-
+# Home route for landing page
 @app.route("/")
 def home():
-    posts = db.session.query(MediaFiles).all()
+    try:
+        posts = db.session.query(MediaFiles).all()
+    except ProgrammingError:
+        posts = []
+        with app.app_context():
+            db.create_all()
+
     return render_template("index.html", admin_list=admin_list, all_posts=posts)
 
 
+# Register route gets user data from form and saves to database
 @app.route('/register', methods=["GET", "POST"])
 def register():
     form = RegisterForm()
     if request.method == "POST":
         user = Users()
         user.name = request.form.get("name")
-        user.email = request.form.get("email")
+        user.email = request.form.get("email").lower()
         user.created_on = datetime.now()
         password = request.form.get("password")
         confirmed_pass = request.form.get("confirm")
@@ -225,11 +239,13 @@ def register():
     return render_template("register.html", form=form)
 
 
+# Route to give email auth page
 @app.route('/auth2')
 def auth():
     return render_template("email-auth.html")
 
 
+# Login to the website account for user
 @app.route('/login', methods=["GET", "POST"])
 def login():
     form = LoginForm()
@@ -270,20 +286,22 @@ def resend_confirmation():
     return redirect(url_for("home"))
 
 
+# Log out user from their session
 @app.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('home'))
 
 
+# Confirm the user's email
 @app.route("/confirm/<token>")
-@login_required
 def confirm_email(token):
-    if current_user.is_confirmed:
-        flash("Account already confirmed.", "success")
-        return redirect(url_for("home"))
     email = confirm_token(token)
-    user = Users.query.filter_by(email=current_user.email).first_or_404()
+    user = Users.query.filter_by(email=email).first_or_404()
+    if user.is_confirmed:
+       flash("Account already confirmed.", "success")
+       return redirect(url_for("home"))
+
     if user.email == email:
         user.is_confirmed = True
         user.confirmed_on = datetime.now()
@@ -295,6 +313,7 @@ def confirm_email(token):
     return redirect(url_for("home"))
 
 
+# Contact page route
 @app.route("/contact_us", methods=["GET", "POST"])
 def contact():
     if request.method == "POST":
@@ -308,6 +327,33 @@ def contact():
     return render_template("contact.html")
 
 
+# Gives admin a chance to verify that indeed they want to delete a post
+@app.route("/pre_delete/<int:index>", methods=["GET", "POST"])
+@admin_only
+def pre_delete(index):
+    return render_template("delete.html", id=index)
+
+
+@app.route("/delete/<int:post_id>", methods=["GET", "POST"])
+@admin_only
+def delete(post_id):
+    blog_to_delete = db.session.query(MediaFiles).filter_by(id=post_id).first()
+    if blog_to_delete.img_url is not None:
+        try:
+            os.remove(blog_to_delete.img_url)
+        except FileNotFoundError:
+            pass
+    if blog_to_delete.video_url is not None:
+        try:
+            os.remove(blog_to_delete.video_url)
+        except FileNotFoundError:
+            pass
+
+    db.session.delete(blog_to_delete)
+    db.session.commit()
+    return redirect(url_for('home'))
+
+# Route for services page
 @app.route("/mservices")
 def service():
     return render_template("services.html")
@@ -318,6 +364,7 @@ def gallery():
     return render_template("gallery2.html")
 
 
+# Route for about page section
 @app.route("/about_us")
 def about():
     return render_template("about2.html")
@@ -328,16 +375,7 @@ def sample():
     return render_template("sample-inner-page.html")
 
 
-@app.route("/tribe")
-def single():
-    return render_template("gallery-single1.html")
-
-
-@app.route("/sheraton")
-def single2():
-    return render_template("gallery-single2.html")
-
-
+# Route for uploading posts
 @app.route("/upload", methods=["GET", "POST"])
 @login_required
 @admin_only
@@ -390,6 +428,8 @@ def upload():
                         os.remove(video_file)
                     except FileNotFoundError:
                         pass
+                    except TypeError:
+                        pass
                     return redirect(url_for('upload'))
 
             for file in files:
@@ -399,14 +439,6 @@ def upload():
                     flash("That filename is already in the database. Try renaming and try again")
                     os.remove(video_file)
                     os.remove(image_file)
-                    try:
-                        os.remove(newpath+image_file)
-                    except FileNotFoundError:
-                        pass
-                    try:
-                        os.remove(newpath + video_file)
-                    except FileNotFoundError:
-                        pass
                     return redirect(url_for('upload'))
 
             video_file = newpath + video_file
@@ -442,6 +474,7 @@ def upload():
     return render_template("upload.html")
 
 
+# This route is for editing a blog post thumbnail, title etc.
 @app.route("/edit-post/<index>", methods=["GET", "POST"])
 @login_required
 @admin_only
