@@ -23,6 +23,7 @@
   <link href="/static/assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
   <link href="/static/assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
   <link href="/static/assets/vendor/aos/aos.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.7.1/min/dropzone.min.css">
 
   <!-- Template Main CSS File -->
   <link href="/static/css/main.css" rel="stylesheet">
@@ -51,29 +52,16 @@
 
       <nav id="navbar" class="navbar">
         <ul>
-<!--          <li class="dropdown"><a href="#"><span>Venues & Locations</span> <i class="bi bi-chevron-down dropdown-indicator"></i></a>-->
-<!--            <ul>-->
-<!--              <li><a href="{{url_for('gallery')}}">Wedding Reception</a></li>-->
-<!--              <li><a href="#">Airport</a></li>-->
 
-<!--              <li class="dropdown"><a href="#"><span>Accomodation</span> <i class="bi bi-chevron-down dropdown-indicator"></i></a>-->
-<!--                <ul>-->
-<!--                  <li><a href="{{url_for('single')}}">The Tribe</a></li>-->
-<!--                  <li><a href="{{url_for('single2')}}">Sheraton</a></li>-->
-<!--                </ul>-->
-<!--              </li>-->
-<!--            </ul>-->
-<!--          </li>-->
           <li><a href="{{url_for('home')}}" class="active">Home</a></li>
-          <li><a href="{{url_for('about')}}">About</a></li>
+
           {% if current_user.is_authenticated %}
           <li><a href="{{url_for('logout')}}"> Logout </a></li>
           {% else %}
           <li><a href="{{url_for('login')}}"> Login </a></li>
           <li><a href="{{url_for('register')}}"> Register</a></li>
           {% endif %}
-          <li><a href="{{url_for('service')}}">Services</a></li>
-          <li><a href="{{url_for('contact')}}">Contact</a></li>
+          <li><a href="{{url_for('merch')}}">merch & events</a></li>
         </ul>
       </nav><!-- .navbar -->
 

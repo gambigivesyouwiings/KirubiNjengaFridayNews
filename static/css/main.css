@@ -103,6 +103,31 @@ h6 {
   position: relative;
 }
 
+.loading-text{
+  font-size:60px;
+  color: red;
+  z-index: 9999;
+  position:absolute;
+  top:30%;
+  left:50%;
+  transform: translate(-50%,-50%);
+  -webkit-transform: translate(-50%,-50%);
+  -moz-transform: translate(-50%,-50%);
+  -ms-transform: translate(-50%,-50%);
+  -o-transform: translate(-50%,-50%);
+}
+
+#Progress_Status {
+          width: 50%;
+          background-color: #ddd;
+}
+
+#myprogressBar {
+          width: 2%;
+          height: 20px;
+          background-color: #4CAF50;
+}
+
 .page-header h2 {
   font-size: 56px;
   font-weight: 500;
@@ -142,6 +167,13 @@ margin-top: 3%;
 .page-header .cta-btn:hover {
   background: #2cbc85;
 }
+
+.comments-header {
+    margin: 5%, 10%;
+    overflow-x:hidden;
+    overflow-y:scroll ;
+    height: 550px;
+    }
 
 /*--------------------------------------------------------------
 # Scroll top button

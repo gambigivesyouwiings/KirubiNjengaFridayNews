@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, url_for, flash, redirect
+from flask import Flask, render_template, request, url_for, flash, redirect, make_response, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -7,7 +7,7 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, cur
 from datetime import datetime
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail, Message
-from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm
+from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, SecondCommentForm
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from functools import wraps
 from flask import abort
@@ -52,7 +52,8 @@ gravatar = Gravatar(app,
                     base_url=None)
 
 # CONNECT TO DB
-app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql://{user}:{password}@{host}/{db_name}"
+# app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql://{user}:{password}@{host}/{db_name}"
+app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///content.db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["SECURITY_PASSWORD_SALT"] = os.getenv("SALT")
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -62,6 +63,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle' : 280}
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 db = SQLAlchemy()
 db.init_app(app)
 migrate = Migrate(app=app, db=db)
@@ -77,6 +79,7 @@ image_file_types = ['.webp', '.svg', '.png', '.avif', '.jpg', '.jpeg', '.jfif', 
 
 admin_list = ["gambikimathi@students.uonbi.ac.ke","chadkirubi@gmail.com","njengashwn@gmail.com"]
 
+
 # This function sends mail to end-users with the Flask-Mail module
 def send_email(to, subject, template):
     msg = Message(
@@ -87,10 +90,12 @@ def send_email(to, subject, template):
     )
     mail.send(msg)
 
+
 # This function generates a unique token that is used for user account authentication
 def generate_token(email):
     serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
     return serializer.dumps(email, salt=app.config["SECURITY_PASSWORD_SALT"])
+
 
 # This function checks the token and returns the associated email address.
 def confirm_token(token, expiration=3600):
@@ -103,7 +108,8 @@ def confirm_token(token, expiration=3600):
     except Exception:
         return False
 
-# This saves a post metadata to the database 
+
+# This saves a post metadata to the database
 def save_post(img_url, video_url=None, title='untitled', author=current_user):
     x = datetime.now()
     full_date = x.strftime("%d %B %Y")
@@ -122,6 +128,7 @@ def save_post(img_url, video_url=None, title='untitled', author=current_user):
 @login_manager.user_loader
 def load_user(user_id):
     return Users.query.get(int(user_id))
+
 
 # Function wrapper to protect some routes from non-admin access
 def admin_only(f):
@@ -193,6 +200,7 @@ def create_admin():
         except Exception:
             print("Couldn't create admin user.")
 
+
 # Home route for landing page
 @app.route("/")
 def home():
@@ -202,8 +210,8 @@ def home():
         posts = []
         with app.app_context():
             db.create_all()
-
-    return render_template("index.html", admin_list=admin_list, all_posts=posts)
+    users = db.session.query(Users).count()
+    return render_template("index.html", admin_list=admin_list, all_posts=posts, followers=users)
 
 
 # Register route gets user data from form and saves to database
@@ -313,6 +321,46 @@ def confirm_email(token):
     return redirect(url_for("home"))
 
 
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot():
+    if request.method == "POST":
+        email = request.form.get("email")
+        user = db.session.query(Users).filter_by(email=email).first()
+        if user is None:
+            flash("That email is not registered in our database")
+            return redirect(url_for('forgot'))
+        else:
+            token = generate_token(user.email)
+            confirm_url = url_for("reset_password", token=token, _external=True)
+            html = render_template("confirm_reset.html", confirm_url=confirm_url)
+            subject = "Reset your password"
+            send_email(user.email, subject, html)
+            flash("A password reset link has been sent to your email", "success")
+            return redirect(url_for("home"))
+    return render_template("forgot.html")
+
+
+@app.route("/reset/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    email = confirm_token(token)
+    reset_form = RegisterForm()
+    user = Users.query.filter_by(email=email).first_or_404()
+    if request.method == "POST":
+        password = request.form.get("password")
+        confirm_password = request.form.get("confirm")
+        if password != confirm_password:
+            flash("passwords do not much")
+            return redirect(url_for('reset_password', token=token))
+        hashed_password = generate_password_hash(password, salt_length=5)
+        user.password = hashed_password
+        db.session.commit()
+        flash("Your password has been reset successfully")
+        return redirect(url_for("login"))
+    reset_form.email.data = email
+    reset_form.name.data = user.name
+    return render_template("reset.html", email=email, form=reset_form)
+
+
 # Contact page route
 @app.route("/contact_us", methods=["GET", "POST"])
 def contact():
@@ -325,6 +373,11 @@ def contact():
         #     flash("Your message has been sent. Thank you!")
         print(email)
     return render_template("contact.html")
+
+
+@app.route("/merch", methods=["GET", "POST"])
+def merch():
+    return render_template("merch.html")
 
 
 # Gives admin a chance to verify that indeed they want to delete a post
@@ -353,15 +406,41 @@ def delete(post_id):
     db.session.commit()
     return redirect(url_for('home'))
 
+
+@app.route("/comments/<int:index>", methods=["GET", "POST"])
+def comments(index):
+    form = SecondCommentForm()
+    post = db.session.query(MediaFiles).filter_by(id=index).first()
+    all_comments = db.session.query(Comments).filter_by(post_id=index).all()
+    if request.method == "POST":
+        if current_user.is_authenticated:
+            comment = Comments()
+            comment.text = request.form.get("body")
+            comment.author_id = current_user.id
+            comment.post_id = post.id
+            db.session.add(comment)
+            db.session.commit()
+            return redirect(url_for('comments', index=index))
+        else:
+            flash("You need to be logged in to comment")
+            return redirect(url_for('login'))
+    return render_template("comments.html", post=post, form=form, blog_comments=all_comments)
+
+
+# Route for deleting comments
+@app.route("/delete-comment/<int:post_id>/<int:comment_id>", methods=["GET", "POST"])
+@login_required
+def delete_comment(post_id, comment_id):
+    comment_to_delete = Comments.query.get(comment_id)
+    db.session.delete(comment_to_delete)
+    db.session.commit()
+    return redirect(url_for('comments', index=post_id))
+
+
 # Route for services page
 @app.route("/mservices")
 def service():
     return render_template("services.html")
-
-
-@app.route("/reception")
-def gallery():
-    return render_template("gallery2.html")
 
 
 # Route for about page section
@@ -532,6 +611,11 @@ def edit(index):
             db.session.commit()
         return redirect(url_for('home'))
     return render_template("edit.html", form=edit_form)
+
+
+@app.errorhandler(413)
+def too_large(e):
+    return make_response(jsonify(message="File is too large"), 413)
 
 
 if __name__ == "__main__":

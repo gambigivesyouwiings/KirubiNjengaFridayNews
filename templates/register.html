@@ -1,5 +1,5 @@
 {% import "bootstrap/wtf.html" as wtf %}
-<!DOCTYPE html>
+
 <html lang="en">
 
 <head>
@@ -52,31 +52,18 @@
 
       <nav id="navbar" class="navbar">
         <ul>
-<!--          <li class="dropdown"><a href="#"><span>Venues & Locations</span> <i class="bi bi-chevron-down dropdown-indicator"></i></a>-->
-<!--            <ul>-->
-<!--              <li><a href="{{url_for('gallery')}}">Wedding Reception</a></li>-->
-<!--              <li><a href="#">Airport</a></li>-->
-
-<!--              <li class="dropdown"><a href="#"><span>Accomodation</span> <i class="bi bi-chevron-down dropdown-indicator"></i></a>-->
-<!--                <ul>-->
-<!--                  <li><a href="{{url_for('single')}}">The Tribe</a></li>-->
-<!--                  <li><a href="{{url_for('single2')}}">Sheraton</a></li>-->
-<!--                </ul>-->
-<!--              </li>-->
-<!--            </ul>-->
-<!--          </li>-->
           <li><a href="{{url_for('home')}}">Home</a></li>
-          <li><a href="{{url_for('about')}}">About</a></li>
+
           {% if current_user.is_authenticated %}
           <li><a href="{{url_for('logout')}}"> Logout </a></li>
           {% else %}
           <li><a href="{{url_for('login')}}"> Login </a></li>
           <li><a href="{{url_for('register')}}" class="active"> Register</a></li>
           {% endif %}
-          <li><a href="{{url_for('service')}}">Services</a></li>
+
           <li><a href="{{url_for('contact')}}">Contact</a></li>
         </ul>
-      </nav><!-- .navbar -->
+      </nav><!-- .navbar!-->
 
       <div class="header-social-links">
         <a href="#" class="twitter"><i class="bi bi-twitter"></i></a>
@@ -139,7 +126,7 @@
         <!-- You can delete the links only if you purchased the pro version. -->
         <!-- Licensing information: https://bootstrapmade.com/license/ -->
         <!-- Purchase the pro version with working PHP/AJAX contact form: https://bootstrapmade.com/photofolio-bootstrap-photography-website-template/ -->
-        Designed by <a href="https://bootstrapmom/">Victor Mugambi</a>
+        Designed by <a href="https://bootstrapmom/">Friday News</a>
       </div>
     </div>
   </footer><!-- End Footer -->
