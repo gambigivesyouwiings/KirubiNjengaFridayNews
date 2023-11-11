@@ -46,7 +46,7 @@
                   {% if current_user.is_authenticated %}
                   <div class="gallery-links d-flex align-items-center justify-content-center">
                     <a href="{{ url_for('comments', index=post.id)}}" class="details-link"><i class="bi-chat-quote"></i></a>
-                    <a href="{{ post.img_url }}" title="{{post.title}}" class="glightbox preview-link"><i class="bi bi-arrows-angle-expand"></i></a>
+                    <a href="{{ post.img_url }}" title="{{post.date}}" class="glightbox preview-link"><i class="bi bi-arrows-angle-expand"></i></a>
 
                     {% if current_user.email in admin_list %}
                     <a href="{{ url_for('pre_delete', index=post.id)}}" class="details-link"><i class="bi bi-x-circle-fill"></i></a>
@@ -64,7 +64,7 @@
                 {% if current_user.email in admin_list %}
                 <a href="{{ url_for('edit', index=post.id, img_to_remove=post.img_url) }}" class="details-link"><i class="bi bi-link-45deg"></i></a>
                 {%endif%}
-                <a href="{{ post.video_url }}" title="{{post.title}} - {{ post.date }}" class="glightbox preview-link"><i class="bi bi-arrows-angle-expand"></i></a>
+                <a href="{{ post.video_url }}" title="{{ post.date }}" class="glightbox preview-link"><i class="bi bi-arrows-angle-expand"></i></a>
                 <a href="{{ url_for('comments', index=post.id)}}" class="details-link"><i class="bi-chat-quote"></i></a>
                 {% if current_user.email in admin_list %}
                 <a href="{{ url_for('pre_delete', index=post.id)}}" class="details-link"><i class="bi bi-x-circle-fill"></i></a>
@@ -94,7 +94,7 @@
         <!-- You can delete the links only if you purchased the pro version. -->
         <!-- Licensing information: https://bootstrapmade.com/license/ -->
         <!-- Purchase the pro version with working PHP/AJAX contact form: https://bootstrapmade.com/photofolio-bootstrap-photography-website-template/ -->
-        Designed by <a href="https://bootstrapme.com/">Friday News</a>
+        Designed by <a href="#">Friday News</a>
       </div>
     </div>
   </footer><!-- End Footer -->

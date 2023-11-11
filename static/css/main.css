@@ -117,6 +117,27 @@ h6 {
   -o-transform: translate(-50%,-50%);
 }
 
+/* For desktops and laptops */
+@media (min-width: 1025px) {
+  .loading-text {
+    font-size: 60px;
+  }
+}
+
+/* For tablets */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .loading-text {
+    font-size: 40px;
+  }
+}
+
+/* For mobile phones */
+@media (max-width: 767px) {
+  .loading-text {
+    font-size: 20px;
+  }
+}
+
 #Progress_Status {
           width: 50%;
           background-color: #ddd;

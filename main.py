@@ -5,34 +5,31 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_ckeditor import CKEditor
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
 from datetime import datetime
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail, Message
-from forms import CreatePostForm, RegisterForm, LoginForm, CommentForm, SecondCommentForm
+from forms import CreatePostForm, RegisterForm, LoginForm, SecondCommentForm
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from functools import wraps
 from flask import abort
-import bleach
 from flask_gravatar import Gravatar
 from flask_migrate import Migrate
 from PIL import Image, UnidentifiedImageError
-from tkinter import messagebox
-import requests
-import json
-import smtplib
 import os
 from dotenv import load_dotenv
 import shutil
 from itsdangerous import URLSafeTimedSerializer
+from flask_dropzone import Dropzone
+import ffmpeg
 
 # Loading environment variables from a secure .env file
 load_dotenv("C:/Users/User/PycharmProjects/environment variables/.env")
 map_api = os.getenv("map_api")
 
-
 # dbFlask was created as a PythonAnywhere MySQL database
 user, password = 'fridaynews', 'vmgambii'
 host = 'fridaynews.mysql.pythonanywhere-services.com'
-db_name = 'fridaynews$default' 
+db_name = 'fridaynews$default'
 
 # Initializing the app variables and import classes
 app = Flask(__name__)
@@ -42,6 +39,7 @@ Bootstrap(app)
 ckeditor = CKEditor(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
+dropzone = Dropzone(app)
 gravatar = Gravatar(app,
                     size=100,
                     rating='g',
@@ -59,25 +57,29 @@ app.config["SECURITY_PASSWORD_SALT"] = os.getenv("SALT")
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_USERNAME'] = os.getenv("USERN")
 app.config['MAIL_PASSWORD'] = os.getenv("GMAIL")
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle' : 280}
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 280}
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['DROPZONE_ALLOWED_FILE_CUSTOM'] = True
+app.config['DROPZONE_ALLOWED_FILE_TYPE'] = 'image/*, video/*'
+app.config['DROPZONE_ENABLE_CSRF'] = True
+
+csrf = CSRFProtect(app)
 db = SQLAlchemy()
 db.init_app(app)
 migrate = Migrate(app=app, db=db)
 mail = Mail(app)
-
 
 video_file_types = ['.WEBM' '.MPG', '.MP2', '.MPEG', '.OGG',
                     '.MPE', '.MPV', '.MP4', '.M4P',
                     '.M4V', '.AVI', '.WMV', '.MOV',
                     '.QT', '.FLV', '.SWF', '.AVCHD']
 
-image_file_types = ['.webp', '.svg', '.png', '.avif', '.jpg', '.jpeg', '.jfif', '.pjpeg', '.pjp', '.gif', '.apng']
+image_file_types = ['.webp', '.svg', '.png', '.avif', '.jpg', '.jpeg', '.jfif', '.jpe', '.pjp', '.gif', '.apn']
 
-admin_list = ["gambikimathi@students.uonbi.ac.ke","chadkirubi@gmail.com","njengashwn@gmail.com"]
+admin_list = ["gambikimathi@students.uonbi.ac.ke", "chadkirubi@gmail.com", "njengashwn@gmail.com"]
 
 
 # This function sends mail to end-users with the Flask-Mail module
@@ -110,7 +112,7 @@ def confirm_token(token, expiration=3600):
 
 
 # This saves a post metadata to the database
-def save_post(img_url, video_url=None, title='untitled', author=current_user):
+def save_post(img_url, video_url=None, title="untitled", author=current_user):
     x = datetime.now()
     full_date = x.strftime("%d %B %Y")
     form_body_content = request.form.get("body")
@@ -128,6 +130,12 @@ def save_post(img_url, video_url=None, title='untitled', author=current_user):
 @login_manager.user_loader
 def load_user(user_id):
     return Users.query.get(int(user_id))
+
+
+# handle CSRF error
+@app.errorhandler(CSRFError)
+def csrf_error(e):
+    return e.description, 400
 
 
 # Function wrapper to protect some routes from non-admin access
@@ -186,7 +194,7 @@ class Comments(UserMixin, db.Model):
 def create_admin():
     """Creates the admin user."""
     email = input("Enter email address: ")
-    name = input("Enter email address: ")
+    name = input("Enter name: ")
     password = input("Enter password: ")
     confirm_password = input("Enter password again: ")
     if password != confirm_password:
@@ -307,8 +315,8 @@ def confirm_email(token):
     email = confirm_token(token)
     user = Users.query.filter_by(email=email).first_or_404()
     if user.is_confirmed:
-       flash("Account already confirmed.", "success")
-       return redirect(url_for("home"))
+        flash("Account already confirmed.", "success")
+        return redirect(url_for("home"))
 
     if user.email == email:
         user.is_confirmed = True
@@ -372,6 +380,7 @@ def contact():
         # if email != "":
         #     flash("Your message has been sent. Thank you!")
         print(email)
+        send_email(to="gi@gmail.com", subject=subject, template=message)
     return render_template("contact.html")
 
 
@@ -454,105 +463,160 @@ def sample():
     return render_template("sample-inner-page.html")
 
 
-# Route for uploading posts
 @app.route("/upload", methods=["GET", "POST"])
 @login_required
 @admin_only
 def upload():
     if request.method == 'POST':
 
-        # Get the list of files from webpage
-        files = request.files.getlist("file")
+        # Get the file from webpage
+        file = request.files.get("file")
         is_video = False
-        counter = 0
-        image_file = None
-        video_file = None
-        title = "untitled"
 
-        # Iterate for each file and check if it's a video file
-        for file in files:
-
-            if os.path.splitext(file.filename)[-1].upper() in video_file_types:
-                is_video = True
-                counter += 1
+        if os.path.splitext(file.filename)[-1].upper() in video_file_types:
+            is_video = True
 
         # This control-flow handles video file types and their thumbnails
         if is_video:
-
-            if len(files) != 2:
-                flash("video file type needs to be only one pair of a video and its thumbnail")
-                return redirect(url_for('upload'))
-            elif counter > 1:
-                flash("video file type needs to be only one pair of a video and its thumbnail image")
-                return redirect(url_for('upload'))
-
             newpath = f'static/assets/videos/'
             if not os.path.exists(newpath):
                 os.makedirs(newpath)
-
-            for file in files:
-                file.save(file.filename)
-                if os.path.splitext(file.filename)[-1].upper() in video_file_types:
-                    video_file = file.filename
-                    title = file.filename
-                elif os.path.splitext(file.filename)[-1].lower() in image_file_types:
-                    image_file = file.filename
-                    image = Image.open(image_file)
-                    img_resize = image.resize((417, 597))
-                    img_resize.save(image_file)
-                else:
-                    flash("The uploaded file format is not recognized as a video or image filetype")
-                    os.remove(file.filename)
-                    try:
-                        os.remove(video_file)
-                    except FileNotFoundError:
-                        pass
-                    except TypeError:
-                        pass
-                    return redirect(url_for('upload'))
-
-            for file in files:
-                try:
-                    shutil.move(file.filename, newpath)
-                except shutil.Error:
-                    flash("That filename is already in the database. Try renaming and try again")
-                    os.remove(video_file)
-                    os.remove(image_file)
-                    return redirect(url_for('upload'))
-
-            video_file = newpath + video_file
-            image_file = newpath + image_file
-            save_post(img_url=image_file, video_url=video_file, title=title)
+            new_name = datetime.now().strftime("%m%d%S%f") + os.path.splitext(file.filename)[-1]
+            video_file = os.path.join(newpath, new_name)
+            file.save(video_file)
+            image_file = newpath + datetime.now().strftime("%m%d%S%f") + '.jpeg'
+            (
+                ffmpeg
+                .input(video_file, ss="00:00:03.000")
+                .filter('scale', 597, -1)
+                .output(image_file, vframes=1, update=1)
+                .run()
+            )
+            image = Image.open(image_file)
+            img_resize = image.resize((417, 597))
+            img_resize.save(image_file)
+            save_post(img_url=image_file, video_url=video_file, title=file.filename)
             flash("Files Uploaded Successfully!")
             return redirect(url_for('upload'))
 
-        # This is purely for image type posts
+        else:
+            # This is purely for image type posts
+            destination = f"static/assets/img/new_folder/"
+            if not os.path.exists(destination):
+                os.makedirs(destination)
 
-        destination = f"static/assets/img/new_folder/"
-        if not os.path.exists(destination):
-            os.makedirs(destination)
+            new_name = datetime.now().strftime("%m%d%S%f") + os.path.splitext(file.filename)[-1]
+            image_file = os.path.join(destination, new_name)
+            file.save(image_file)
 
-        for file in files:
-            file.save(file.filename)
-            if os.path.splitext(file.filename)[-1].lower() not in image_file_types:
-                os.remove(file.filename)
-            else:
-                image = Image.open(file.filename)
-                img_resize = image.resize((417, 597))
-                img_resize.save(file.filename)
+            image = Image.open(image_file)
+            img_resize = image.resize((417, 597))
+            img_resize.save(image_file)
 
-                try:
-                    shutil.move(file.filename, destination)
-                except shutil.Error:
-                    os.remove(file.filename)
-                else:
-                    image_file = destination + file.filename
-                    save_post(img_url=image_file, title=file.filename)
-        flash("Files Uploaded Successfully!")
-        return redirect(url_for('upload'))
+            save_post(img_url=image_file, title=file.filename)
+            flash("Files Uploaded Successfully!")
+            return redirect(url_for('upload'))
     return render_template("upload.html")
 
 
+# Route for uploading posts
+# @app.route("/upload", methods=["GET", "POST"])
+# @login_required
+# @admin_only
+# def upload():
+#     if request.method == 'POST':
+#
+#         # Get the list of files from webpage
+#         files = request.files.getlist("file")
+#         # files = request.files.items()
+#
+#         is_video = False
+#         counter = 0
+#         image_file = None
+#         video_file = None
+#         title = "untitled"
+#
+#         # Iterate for each file and check if it's a video file
+#         for file in files:
+#
+#             if os.path.splitext(file.filename)[-1].upper() in video_file_types:
+#                     is_video = True
+#                     counter += 1
+#
+#         # This control-flow handles video file types and their thumbnails
+#         if is_video:
+#             newpath = f'static/assets/videos/'
+#             if not os.path.exists(newpath):
+#                 os.makedirs(newpath)
+#
+#             if len(files) != 2:
+#                 flash("video file type needs to be only one pair of a video and its thumbnail")
+#                 return redirect(url_for('upload'))
+#             elif counter > 1:
+#                 flash("video file type needs to be only one pair of a video and its thumbnail image")
+#                 return redirect(url_for('upload'))
+#
+#             for file in files:
+#                 new_name = datetime.now().strftime("%m%d%Y%H%M%S")+os.path.splitext(file.filename)[-1]
+#                 file.save(os.path.join(newpath, new_name))
+#                 if os.path.splitext(file.filename)[-1].upper() in video_file_types:
+#                     video_file = newpath + new_name
+#                     title = file.filename
+#                 elif os.path.splitext(file.filename)[-1].lower() in image_file_types:
+#                     image_file = newpath + new_name
+#                     image = Image.open(image_file)
+#                     img_resize = image.resize((417, 597))
+#                     img_resize.save(image_file)
+#                 else:
+#                     flash("The uploaded file format is not recognized as a video or image filetype")
+#                     os.remove(file.filename)
+#                     try:
+#                         os.remove(video_file)
+#                     except FileNotFoundError:
+#                         pass
+#                     except TypeError:
+#                         pass
+#
+#                     try:
+#                         os.remove(image_file)
+#                     except FileNotFoundError:
+#                         pass
+#                     except TypeError:
+#                         pass
+#                     return redirect(url_for('upload'))
+#
+#             save_post(img_url=image_file, video_url=video_file, title=title)
+#             flash("Files Uploaded Successfully!")
+#             return redirect(url_for('upload'))
+#
+#         # This is purely for image type posts
+#
+#         destination = f"static/assets/img/new_folder/"
+#         if not os.path.exists(destination):
+#             os.makedirs(destination)
+#
+#         for file in files:
+#             file.save(file.filename)
+#             if os.path.splitext(file.filename)[-1].lower() not in image_file_types:
+#                 os.remove(file.filename)
+#             else:
+#                 image = Image.open(file.filename)
+#                 img_resize = image.resize((417, 597))
+#                 img_resize.save(file.filename)
+#
+#                 try:
+#                     shutil.move(file.filename, destination)
+#                 except shutil.Error:
+#                     os.remove(file.filename)
+#                     flash("That file already exists")
+#                 else:
+#                     image_file = destination + file.filename
+#                     save_post(img_url=image_file, title=file.filename)
+#         flash("Files Uploaded Successfully!")
+#         return redirect(url_for('upload'))
+#     return render_template("upload.html")
+#
+#
 # This route is for editing a blog post thumbnail, title etc.
 @app.route("/edit-post/<index>", methods=["GET", "POST"])
 @login_required
@@ -591,7 +655,7 @@ def edit(index):
 
         # This removes the original image after successfully moving the new file
         try:
-            if img_to_remove != file.filename:
+            if img_to_remove != image_file:
                 os.remove(img_to_remove)
         except FileNotFoundError:
             pass
@@ -600,15 +664,8 @@ def edit(index):
         flash("Files Uploaded Successfully!")
 
         # now to effect these changes in the database
-        try:
-            if edit_form.title.data != "":
-                blog_to_edit.title = edit_form.title.data
-        except IntegrityError:
-            flash("Two blog posts can't have the same title")
-            return redirect(url_for('edit', index=index))
-        finally:
-            blog_to_edit.img_url = image_file
-            db.session.commit()
+        blog_to_edit.img_url = image_file
+        db.session.commit()
         return redirect(url_for('home'))
     return render_template("edit.html", form=edit_form)
 

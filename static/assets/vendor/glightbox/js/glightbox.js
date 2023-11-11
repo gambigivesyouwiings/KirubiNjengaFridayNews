@@ -1962,7 +1962,7 @@
         var origin = url;
         url = url.toLowerCase();
 
-        if (url.match(/\.(jpeg|jpg|jpe|gif|png|apn|webp|avif|svg)/) !== null) {
+        if (url.match(/\.(jfif|jpeg|jpg|jpe|gif|png|apn|webp|avif|svg)/) !== null) {
           return 'image';
         }
 

@@ -23,10 +23,19 @@
   <link href="/static/assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet">
   <link href="/static/assets/vendor/glightbox/css/glightbox.min.css" rel="stylesheet">
   <link href="/static/assets/vendor/aos/aos.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />
+  {{ dropzone.load_css() }}
+<!--  <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />-->
 
   <!-- Template Main CSS File -->
   <link href="/static/css/main.css" rel="stylesheet">
+  <style>
+    .dropzone {
+        border: 2px dashed #0087F7;
+        margin: 10%;
+        min-height: 400px;
+        color:  #0087F7;
+    }
+  </style>
 
   <!-- =======================================================
   * Template Name: PhotoFolio
@@ -43,7 +52,7 @@
   <header id="header" class="header d-flex align-items-center fixed-top">
     <div class="container-fluid d-flex align-items-center justify-content-between">
 
-      <a href="index.html" class="logo d-flex align-items-center  me-auto me-lg-0">
+      <a href="#" class="logo d-flex align-items-center  me-auto me-lg-0">
         <!-- Uncomment the line below if you also wish to use an image logo -->
         <img src="/static/assets/img/profile-img.jpg" alt="">
         <i class="bi bi-camera"></i>
@@ -88,14 +97,11 @@
             <h2>Secret file upload</h2>
               <p>This is where the magic happens! As an admin please note:</p>
             <br>
-              <p>1. You can only upload one video at a time!</p>
-              <p>2. If the chosen files are purely images, you can concurrently upload as many as you want</p>
-              <p>3. Uploading a video file means only one other image file type is allowed (this will be the video thumbnail)</p>
+              <p>1. You can now upload multiple media types as you wish!(upto 9)</p>
+              <p>2. Videos will have an auto-generated thumbnail which you can edit later</p>
+              <p>3. Non-media file types won't be accepted. Click/drag to drop-area to add files and wait for tick</p>
             <br>
-            <form action="{{ url_for('upload') }}" class="dropzone" id="my-awesome-dropzone">
-              <input class="cta-btn" type="file" name="file" multiple >
-              <input class="cta-btn button-margin" type = "submit" value="drag,drop,click">
-            </form>
+                {{ dropzone.create(action=url_for('upload')) }}
 <!--            <form action = "{{url_for('upload') }}" method="POST" enctype="multipart/form-data" id="file-form">-->
 <!--              <input class="cta-btn" id="media" type="file" name="file" multiple >-->
 <!--              <input class="cta-btn button-margin" type = "submit" value="Upload">-->
@@ -169,7 +175,10 @@
 
   <!-- Template Main JS File -->
   <script src="/static/js/main.js"></script>
-  <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+  {{ dropzone.load_js() }}
+  {{ dropzone.config(max_files=10, max_file_size=16, timeout=10000, default_message='Drop here!') }}
+
+<!--  <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>-->
 
 </body>
 

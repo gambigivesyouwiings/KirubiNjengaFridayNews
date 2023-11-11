@@ -6,7 +6,6 @@ from flask_ckeditor import CKEditorField
 
 # WTForm for posts
 class CreatePostForm(FlaskForm):
-    title = StringField("New Post Title")
     file = FileField("New Post Image", id="fike", validators=[DataRequired()])
     submit = SubmitField("Submit Post")
 
