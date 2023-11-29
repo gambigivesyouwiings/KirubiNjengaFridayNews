@@ -21,6 +21,9 @@ import shutil
 from itsdangerous import URLSafeTimedSerializer
 from flask_dropzone import Dropzone
 import ffmpeg
+from threading import Lock
+from collections import defaultdict
+from pathlib import Path
 
 # Loading environment variables from a secure .env file
 load_dotenv("C:/Users/User/PycharmProjects/environment variables/.env")
@@ -71,6 +74,8 @@ db = SQLAlchemy()
 db.init_app(app)
 migrate = Migrate(app=app, db=db)
 mail = Mail(app)
+lock = Lock()
+chucks = defaultdict(list)
 
 video_file_types = ['.WEBM' '.MPG', '.MP2', '.MPEG', '.OGG',
                     '.MPE', '.MPV', '.MP4', '.M4P',
@@ -468,155 +473,99 @@ def sample():
 @admin_only
 def upload():
     if request.method == 'POST':
-
-        # Get the file from webpage
         file = request.files.get("file")
-        is_video = False
+        extension = os.path.splitext(file.filename)[-1]
+        if not file:
+            make_response(jsonify(message="File not detected"), 400)
 
-        if os.path.splitext(file.filename)[-1].upper() in video_file_types:
-            is_video = True
+        dz_uuid = request.form.get("dzuuid")
+        # if not dz_uuid:
+        #     # Assume this file has not been chunked
+        #     with open(storage_path / f"{uuid.uuid4()}_{secure_filename(file.filename)}", "wb") as f:
+        #         file.save(f)
+        #     return "File Saved"
 
-        # This control-flow handles video file types and their thumbnails
-        if is_video:
-            newpath = f'static/assets/videos/'
-            if not os.path.exists(newpath):
-                os.makedirs(newpath)
-            new_name = datetime.now().strftime("%m%d%S%f") + os.path.splitext(file.filename)[-1]
-            video_file = os.path.join(newpath, new_name)
-            file.save(video_file)
-            image_file = newpath + datetime.now().strftime("%m%d%S%f") + '.jpeg'
-            (
-                ffmpeg
-                .input(video_file, ss="00:00:03.000")
-                .filter('scale', 597, -1)
-                .output(image_file, vframes=1, update=1)
-                .run()
-            )
-            image = Image.open(image_file)
-            img_resize = image.resize((417, 597))
-            img_resize.save(image_file)
-            save_post(img_url=image_file, video_url=video_file, title=file.filename)
-            flash("Files Uploaded Successfully!")
-            return redirect(url_for('upload'))
+        # Chunked download
+        try:
+            current_chunk = int(request.form["dzchunkindex"])
+            total_chunks = int(request.form["dztotalchunkcount"])
+            print(total_chunks)
+        except KeyError as err:
+            return f"Not all required fields supplied, missing {err}"
+        except ValueError:
+            return f"Values provided were not in expected format"
 
-        else:
-            # This is purely for image type posts
-            destination = f"static/assets/img/new_folder/"
-            if not os.path.exists(destination):
-                os.makedirs(destination)
+        save_dir = f"/static/chunk_path/{dz_uuid}/"
 
-            new_name = datetime.now().strftime("%m%d%S%f") + os.path.splitext(file.filename)[-1]
-            image_file = os.path.join(destination, new_name)
-            file.save(image_file)
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
 
-            image = Image.open(image_file)
-            img_resize = image.resize((417, 597))
-            img_resize.save(image_file)
+        # Save the individual chunk
+        with open(save_dir + str(request.form["dzchunkindex"]), "wb") as f:
+            file.save(f)
 
-            save_post(img_url=image_file, title=file.filename)
-            flash("Files Uploaded Successfully!")
-            return redirect(url_for('upload'))
+        # See if we have all the chunks downloaded
+        with lock:
+            chucks[dz_uuid].append(current_chunk)
+            completed = len(chucks[dz_uuid]) == total_chunks
+
+        # Concat all the files into the final file when all are downloaded
+        s = f"{dz_uuid}{extension}"
+        if completed:
+            with open(s, "wb") as f:
+                for file_number in range(total_chunks):
+                    f.write(Path(save_dir + str(file_number)).read_bytes())
+            print(f"{file.filename} has been uploaded")
+            shutil.rmtree(save_dir)
+            is_video = False
+
+            # Now to check if the file is a video file or image file and make thumbnails
+            if os.path.splitext(s)[-1].upper() in video_file_types:
+                is_video = True
+
+            # This control-flow handles video file types and their thumbnails
+            if is_video:
+                newpath = f'static/assets/videos/'
+                if not os.path.exists(newpath):
+                    os.makedirs(newpath)
+                new_name = datetime.now().strftime("%m%d%S%f") + os.path.splitext(file.filename)[-1]
+                video_file = os.path.join(newpath, new_name)
+                shutil.move(s, video_file)
+                image_file = newpath + datetime.now().strftime("%m%d%S%f") + '.jpeg'
+                (
+                    ffmpeg
+                    .input(video_file, ss="00:00:03.000")
+                    .filter('scale', 597, -1)
+                    .output(image_file, vframes=1, update=1)
+                    .run()
+                )
+                image = Image.open(image_file)
+                img_resize = image.resize((417, 597))
+                img_resize.save(image_file)
+                save_post(img_url=image_file, video_url=video_file, title=file.filename)
+                flash("Files Uploaded Successfully!")
+                return redirect(url_for('upload'))
+
+            else:
+                # This is purely for image type posts
+                destination = f"static/assets/img/new_folder/"
+                if not os.path.exists(destination):
+                    os.makedirs(destination)
+
+                new_name = datetime.now().strftime("%m%d%S%f") + os.path.splitext(file.filename)[-1]
+                image_file = os.path.join(destination, new_name)
+                os.rename(s, image_file)
+
+                image = Image.open(image_file)
+                img_resize = image.resize((417, 597))
+                img_resize.save(image_file)
+
+                save_post(img_url=image_file, title=file.filename)
+                flash("Files Uploaded Successfully!")
+                return redirect(url_for('upload'))
     return render_template("upload.html")
 
 
-# Route for uploading posts
-# @app.route("/upload", methods=["GET", "POST"])
-# @login_required
-# @admin_only
-# def upload():
-#     if request.method == 'POST':
-#
-#         # Get the list of files from webpage
-#         files = request.files.getlist("file")
-#         # files = request.files.items()
-#
-#         is_video = False
-#         counter = 0
-#         image_file = None
-#         video_file = None
-#         title = "untitled"
-#
-#         # Iterate for each file and check if it's a video file
-#         for file in files:
-#
-#             if os.path.splitext(file.filename)[-1].upper() in video_file_types:
-#                     is_video = True
-#                     counter += 1
-#
-#         # This control-flow handles video file types and their thumbnails
-#         if is_video:
-#             newpath = f'static/assets/videos/'
-#             if not os.path.exists(newpath):
-#                 os.makedirs(newpath)
-#
-#             if len(files) != 2:
-#                 flash("video file type needs to be only one pair of a video and its thumbnail")
-#                 return redirect(url_for('upload'))
-#             elif counter > 1:
-#                 flash("video file type needs to be only one pair of a video and its thumbnail image")
-#                 return redirect(url_for('upload'))
-#
-#             for file in files:
-#                 new_name = datetime.now().strftime("%m%d%Y%H%M%S")+os.path.splitext(file.filename)[-1]
-#                 file.save(os.path.join(newpath, new_name))
-#                 if os.path.splitext(file.filename)[-1].upper() in video_file_types:
-#                     video_file = newpath + new_name
-#                     title = file.filename
-#                 elif os.path.splitext(file.filename)[-1].lower() in image_file_types:
-#                     image_file = newpath + new_name
-#                     image = Image.open(image_file)
-#                     img_resize = image.resize((417, 597))
-#                     img_resize.save(image_file)
-#                 else:
-#                     flash("The uploaded file format is not recognized as a video or image filetype")
-#                     os.remove(file.filename)
-#                     try:
-#                         os.remove(video_file)
-#                     except FileNotFoundError:
-#                         pass
-#                     except TypeError:
-#                         pass
-#
-#                     try:
-#                         os.remove(image_file)
-#                     except FileNotFoundError:
-#                         pass
-#                     except TypeError:
-#                         pass
-#                     return redirect(url_for('upload'))
-#
-#             save_post(img_url=image_file, video_url=video_file, title=title)
-#             flash("Files Uploaded Successfully!")
-#             return redirect(url_for('upload'))
-#
-#         # This is purely for image type posts
-#
-#         destination = f"static/assets/img/new_folder/"
-#         if not os.path.exists(destination):
-#             os.makedirs(destination)
-#
-#         for file in files:
-#             file.save(file.filename)
-#             if os.path.splitext(file.filename)[-1].lower() not in image_file_types:
-#                 os.remove(file.filename)
-#             else:
-#                 image = Image.open(file.filename)
-#                 img_resize = image.resize((417, 597))
-#                 img_resize.save(file.filename)
-#
-#                 try:
-#                     shutil.move(file.filename, destination)
-#                 except shutil.Error:
-#                     os.remove(file.filename)
-#                     flash("That file already exists")
-#                 else:
-#                     image_file = destination + file.filename
-#                     save_post(img_url=image_file, title=file.filename)
-#         flash("Files Uploaded Successfully!")
-#         return redirect(url_for('upload'))
-#     return render_template("upload.html")
-#
-#
 # This route is for editing a blog post thumbnail, title etc.
 @app.route("/edit-post/<index>", methods=["GET", "POST"])
 @login_required

@@ -176,8 +176,17 @@
   <!-- Template Main JS File -->
   <script src="/static/js/main.js"></script>
   {{ dropzone.load_js() }}
-  {{ dropzone.config(max_files=10, max_file_size=16, timeout=10000, default_message='Drop here!') }}
-
+  {{ dropzone.config(max_files=10, max_file_size=16, default_message='Drop here!', custom_options='chunking: true, forceChunking: true, chunkSize: 1000000') }}
+  <script type="application/javascript">
+    Dropzone.options.dropper = {
+        paramName: 'file',
+        chunking: true,
+        forceChunking: true,
+        url: '/upload',
+        maxFilesize: 1025,
+        chunkSize: 1000000
+    }
+  </script>
 <!--  <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>-->
 
 </body>
