@@ -34,7 +34,7 @@
         {% if current_user.is_authenticated %}
         <div class="row gy-4 justify-content-center">
         {% else %}
-          <div><h1 class="loading-text"> Log-in to view more</h1></div>
+          <div><a href="{{url_for('login')}}"><h1 class="loading-text"> Log-in to view more</h1></a></div>
           <div class="row gy-4 justify-content-center blur">
         {% endif %}
 
